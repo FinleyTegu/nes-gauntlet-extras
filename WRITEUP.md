@@ -131,7 +131,7 @@ The screenshot keeps Room 1's palette, so the colours are not necessarily the on
 
 ## 5. A cut credit line — Leftovers
 
-The credits string table still holds SPECIAL THANKS TO and RANDY BROWELEIT, but the credits script never shows them. Where they would sit, after PAT MCCARTHY under Technical Support, the script has five blank-line codes instead of the usual three.
+The credits string table still holds SPECIAL THANKS TO and RANDY BROWELEIT, but the credits script never shows them.
 
 ![Retail credits and the restored lines](images/credits.png)
 
@@ -149,11 +149,7 @@ Changing two bytes of the gap, 0x07ECD to `12` and 0x07ECF to `13`, shows both l
 
 ## 6. Two unused sound effects — Dormant
 
-Sound IDs `$21` and `$27` are complete, distinct sound effects that the sound driver plays correctly, but no code ever requests them. They are about 0.8 s each: `$21` is a pitch that rises and then falls, and `$27` is a fast descending arpeggio that turns upward at the end.
-
-![Spectrograms of sound $21 and sound $27](images/sfx-spectrograms.png)
-
-Game code requests sounds by loading an ID and calling `$C248`, which pushes it onto a 5-slot queue at `$BB`–`$BF`. The driver in bank 8 looks each ID up in two tables: a command type at `$9051` and a parameter at `$9087`. Both IDs are type 7 (start a track). `$21` starts track `$1B` and `$27` starts track `$21`; each track has its own stream data. No immediate load of `$21` or `$27` precedes a call to `$C248`, and none of the table-driven requests (hero voice tables, music table `$C615`) can produce them. A few other effects (IDs $11, $13, $15, $20, $29) also never came up during testing, but each of those has a request site in the game code. These two have none.
+Sound IDs `$21` and `$27` are complete, distinct sound effects that the sound driver plays correctly, but no code ever requests them. They are about 0.8 s each: `$21` is a pitch that rises and then falls, and `$27` is a fast descending arpeggio that turns upward at the end. My thought is that the first is an alternate sound for an acid puddle attack, and the second is someone blowing a whistle. 
 
 | Part | Bank / CPU | File offset | Bytes |
 | --- | --- | --- | --- |
@@ -166,22 +162,6 @@ The WAV renders ([sound `$21`](audio/sfx_21.wav), [sound `$27`](audio/sfx_27.wav
 ## 7. Item type $40 — Unfinished
 
 Item type `$40` is defined in the tables but sits in no room, not even the test rooms, and in no room's contents list. Nothing creates it, though it works when forced in.
-
-![The game drawing types 40, 43, 4A, 3D and others](images/item-types.png)
-
-**Type `$40`** completes the potion set `$40`–`$45`. It uses graphic `$77`, next in sequence after the five shipped potions (`$76`–`$72`), and the same pickup handler. Its bit is bit 0 of `$AC`, the bit the Orb (`$4B`, handler at `$83AF`) also sets. The end-of-game check at `$C0EB` treats that bit as "has the Orb". When forced into Room 1 in the emulator, picking up `$40` sets the bit and shows an icon in the status screen's first inventory slot. Whether it was an early Orb or a sixth potion dropped because of the clash is guesswork.
-
-**Type `$3D` is not an item.** It is the room loader's marker for "take this object's type from the room's contents list" (bank 0 `$8486`). Shipped rooms use it to place potions and other items numbered `$3F` and up, including the "?" blocks in Rooms 16 and 66. A `$3D` never survives loading, which is why the power-up handler stops at `$3B` and its graphic entry just repeats `$72`.
-
-| Part | Bank / CPU | File offset | Bytes |
-| --- | --- | --- | --- |
-| Graphic number, type `$40` | 2 / `$BBD0` | 0x05BE0 | 77 |
-| Flag byte, type `$40` | 2 / `$B3BB` | 0x053CB | 01 |
-| Potion handler, types `$40`–`$45` | 1 / `$82D0` | 0x022E0 | 84 89 A8 B9 7B B3 15 AC 95 AC |
-| Orb handler (sets the same bit as `$40`) | 1 / `$83AF` | 0x023BF | B5 AC 09 01 95 AC 4C ED AB |
-| Ending check | 14 / `$C0EB` | 0x1C0FB | B5 AC 4A B0 20 |
-
-Tested by turning Room 1's first key into `$40`: it set `$AC` to `01` and vanished. No code loads `#$40` into the object table and no room's contents list holds it, so nothing in the game creates it.
 
 ## 8. Random-input demo mode and orphaned code — Fossils
 
@@ -243,51 +223,6 @@ The key is in `$D8` (player 1) or `$D9` (player 2). A new game picks it from the
 
 The check never stores the combination itself. It compares each letter typed, XORed with the key, against the low 5 bits of N, U, K, I, E, D, O and G. Each of the eight clue rooms reveals one letter, as the next part shows.
 
-### The clue letters hide in chests and a breakable wall
-
-Eight timed rooms each hold one "?" that reveals one letter of the combination. Only Rooms 16 and 66 leave it in the open. Five lock it in a chest that needs a key, and Room 70 seals it inside a breakable wall.
-
-| Room | Letter | Where the "?" is | If the timer runs out |
-| --- | --- | --- | --- |
-| 16 | 1st | In the open | Room 19 |
-| 26 | 2nd | Locked chest | Room 27 |
-| 46 | 3rd | Locked chest | Room 47 |
-| 54 | 4th | Locked chest | Room 55 |
-| 66 | 5th | In the open | Room 68 |
-| 70 | 6th | Inside a breakable wall | Room 71 |
-| 81 | 7th | Locked chest | Room 82 |
-| 90 | 8th | Locked chest | Room 91 |
-
-Bit 7 of the room flags `$C4` makes a room timed: a countdown from 99 replaces the room number on the HUD. The low 3 bits of `$C5` pick both the letter and the room the timer sends you to. Grab the "?" and leave by an exit before the countdown ends, and the Morak screen says YOU HAVE FOUND A CLUE TO FINDING THE ORB with that letter in place. Let the timer run out and it says YOU WILL NEVER FIND THE ORB NOW HA HA HA.
-
-The "?" is never stored in a map. Map data holds only each object's type and position. At load, chests (type `$2F`), breakable walls (`$04`), warp exits (`$11`) and the marker type `$3D` each take the next byte of the room's contents list. A chest or wall keeps it as its contents, a warp exit as its destination, and `$3D` turns into that type. The lists hang off a pointer table indexed by room number, not by map, so a map that no room uses has no list. Room 46's list, `46 00 3F 46`, is what puts the "?" in its chest.
-
-| Part | Bank / CPU | File offset | Bytes |
-| --- | --- | --- | --- |
-| Contents-list pointers, one per room slot | 0 / `$8820` | 0x00830 | EE 88 EF 88 EF 88 … |
-| Room 46 contents list | 0 / `$898C` | 0x0099C | 46 00 3F 46 |
-| Loader: `$04`, `$2F` and `$11` read a byte | 0 / `$84C3` | 0x004D3 | 20 25 00 9D 80 05 |
-| Loader: `$3D` takes its type from the list | 0 / `$8486` | 0x00496 | C0 3D D0 0F 20 B9 C9 20 25 00 9D 00 04 |
-| Chest opened with a key | 1 / `$8C9B` | 0x02CAB | A6 76 B5 AE F0 F9 |
-| "?" pickup sets `$C5` bit 5 | 1 / `$83B8` | 0x023C8 | A9 20 05 C5 85 C5 |
-| Letter drawn on the Morak screen | 3 / `$8E62` | 0x06E72 | A5 C5 29 20 F0 38 |
-| Where the timer sends you | 14 / `$C601` | 0x1C611 | 12 1A 2E 36 43 46 51 5A |
-
-### The Extra Magic potion is in two rooms
-
-Item type `$43`, the Extra Magic potion, is in two shipped rooms but never in plain view. Room 16 keeps it in a locked chest and Room 50 inside a breakable wall, so it appears only once you open one. Both test rooms also have one out in the open. Picking it up sets bit 3 of the player's potion byte (`$AC`). When the player then uses a magic potion (B button), `$9BC2` copies that bit into the effect flags. That moves the lookup into the second half of the potion table at bank 2 `$BC28` (file 0x05C38), where almost every monster entry is 00, meaning destroyed outright, instead of the small damage values in the first half.
-
-| Part | Bank / CPU | File offset | Bytes |
-| --- | --- | --- | --- |
-| Room 16 contents list (chest) | 0 / `$8905` | 0x00915 | 3F 43 0B 31 35 0C 46 0A 92 |
-| Room 50 contents list (wall) | 0 / `$8993` | 0x009A3 | 31 18 18 18 43 |
-| Pickup handler, types `$40`–`$45` | 1 / `$82D0` | 0x022E0 | 84 89 A8 B9 7B B3 15 AC 95 AC |
-| Bit for `$43` | 2 / `$B3BE` | 0x053CE | 08 |
-| Graphic number for `$43` | 2 / `$BBD3` | 0x05BE3 | 74 |
-| Magic potion use | 1 / `$9BBD` | 0x03BCD | … B5 AC 29 08 05 04 … |
-
-An object dump taken as each room loads misses both copies, because a chest or wall shows what it holds only when opened. In the emulator, opening Room 16's chest with a key and shooting Room 50's wall each dropped the potion, and picking it up set `$AC` to `08`. The status screen has an inventory slot for it.
-
 ### Password instructions appear only after a game over
 
 On power-up, the player-count screen shows only HOW MANY PLAYERS. After a game over in which the game kept password data for a player, the same header cycles through HOW MANY PLAYERS, TO ENTER PASSWORD and HOLD A AND PRESS START. That is the only place the game explains how to reach the password screen.
@@ -303,10 +238,6 @@ The header code moves to the next message only when `$D8` or `$D9` is non-zero (
 | HOLD A AND PRESS START | 3 / `$823F` | 0x0624F | 24 tiles |
 | Cycling condition | 3 / `$8053` | 0x06063 | A5 D8 05 D9 F0 04 E0 03 90 02 A2 00 |
 | Game-over clear | 3 / `$82B8` | 0x062C8 | A2 00 A9 00 15 C8 E8 E8 E0 10 … 85 D8 |
-
-### A+B+Select+Start soft reset
-
-Holding A, B, Select and Start together resets the game to the title screen from anywhere: in play, on the title or in the menus. The joypad routine checks for all four on two reads in a row, clears the warm-boot marker at `$018D` and jumps to the reset code. In play, Start opens the pause screen first, and the reset follows. File 0x1C3AD, bank 14 `$C39D`: A5 9D 25 9F C9 F0 D0 08 A9 00 8D 8D 01 4C 90 FF.
 
 ### The attract demo has its own room
 
@@ -341,30 +272,8 @@ The demo is not one of the 100 rooms. The demo code sets the room to slot `$64` 
 | GSUEAYAE + YUNAOATU | Room 1 becomes map `$5C` with its clue restored: the top piece of the breakable wall at the end of the long corridor drops a "?". Shoot it, grab it and leave before the timer runs out, and the Morak screen shows the third letter. YUNAOATU also puts a "?" in one container in Room 7. |
 | ZOUOSTEA + LOUONTEA | Restores SPECIAL THANKS TO RANDY BROWELEIT in the attract-mode credits |
 
-**RAM to watch or poke.**
-
-| Address | Meaning |
-| --- | --- |
-| `$A3` | Current room, 0-based (`$00`–`$63` are Rooms 1–100) |
-| `$A8` / `$A9` | Room for player 1 / player 2 |
-| `$A6` / `$A7` | Hero in bits 0–1: 0 = picked with Up, 1 = Left, 2 = Down, 3 = Right |
-| `$B2` + `$B4` | Player 1 power, low and high byte |
-| `$AA` / `$AC` | Player 1 power-up bits / potion and Orb bits |
-| `$C2` | Game mode (`$01` playing, `$02` attract demo, `$0E` palette editor) |
-| `$D8` / `$D9` | Combination key for player 1 / 2 (first password character) |
-| `$C8`–`$D6` | Password bytes, players interleaved |
-| `$0400`, `$0480`, `$0500` | Object type, X and Y tables (128 slots each) |
-
-**Breakpoints.**
-
-- `$C738`: start of a game's room sequence. Set `$A8`/`$A9` here to warp, including to `$65`/`$66` for the test rooms.
-- `$C489`: top of the in-room loop. This is where the palette-editor trampoline in section 1 goes.
-- `$C248`: sound request. A holds the sound ID. To hear the unused effects, set A to `$21` or `$27` here.
-
-**Hex searches** (any hex editor, no header needed): `4E 55 4B 49 45 44 4F 47` finds both NUKIEDOG strings. `11 80 80 80 80 80 14` finds the credits gap. `A5 C2 48 A9 0E 85 C2` finds the palette editor's entry.
-
 ## Sources
 
 - [Gauntlet Cheats, Codes, and Secrets for NES — GameFAQs](https://gamefaqs.gamespot.com/nes/587296-gauntlet/cheats): the 43C BBI HYY passwords and the XRTW98Y7 combination used to check the NUKIEDOG formula.
 - [Gauntlet (NES) — StrategyWiki](<https://strategywiki.org/wiki/Gauntlet_(NES)>): background on the 100 rooms, clue rooms and password system.
-- Everything else comes from the ROM (MD5 d6c977caa1d5a1deaeedbfe5668db01d) and emulator runs. The Cutting Room Floor was not consulted.
+- Everything else comes from the ROM (MD5 d6c977caa1d5a1deaeedbfe5668db01d) and emulator runs. The Cutting Room Floor was not consulted out of respect for their request to not be crawled; I only viewed the site once in a browser to see what has already been discovered to not copy their work.
