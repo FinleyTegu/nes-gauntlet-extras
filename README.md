@@ -25,7 +25,7 @@ Apply it with any IPS patcher, such as Floating IPS (Flips) or Rom Patcher JS.
 
 ### The menu
 
-The menu appears before the title screen at power-on and after the game's A+B+Select+Start soft reset. Up and Down move the arrow, and A or Start picks an item.
+The menu appears before the title screen at power-on.
 
 | Item | What it does |
 | --- | --- |
@@ -38,7 +38,7 @@ The menu appears before the title screen at power-on and after the game's A+B+Se
 
 ### Changes in every game started from the menu
 
-- **`NUKIEDOG` always opens the vault.** The patch removes the password key from the combination check, so the combination no longer changes from game to game. The clue rooms still reveal the original, key-scrambled letters, so those letters no longer match.
+- **`NUKIEDOG` always opens the vault.** The patch removes the password key from the combination check, so the combination no longer changes from game to game. This is normally accomplished with an XOR on the string with the first character of the player's password.  
 - **Select opens the palette editor** in any room.
 
 ### Using the palette editor
@@ -49,7 +49,7 @@ The menu appears before the title screen at power-on and after the game's A+B+Se
 | Up / Down | Change that entry's colour by one step, `$00`–`$3F` |
 | A | Close the editor and carry on playing |
 
-The readout at the bottom of the screen shows **PF** (background, "playfield") or **MO** (sprite, "motion object"), the palette number, the colour number within it, and the value in hex. Each press moves one step, and holding a button doesn't repeat. To change the backdrop colour, edit MO palette 0, colour 0. Edits last until you leave the room, because every room loads its own palettes.
+The readout at the bottom of the screen shows **PF** (background, "playfield") or **MO** (sprite, "motion object"), the palette number, the colour number within it, and the value in hex.
 
 ### How it works
 
